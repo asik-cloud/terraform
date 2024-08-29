@@ -1,31 +1,21 @@
-resource "aws_instance" "master" {
+resource "aws_instance" "roboshop" {
 
-    ami = "ami-0b4f379183e5706b9"
-    instance_type = "t2.micro"
-    vpc_security_group_ids = [aws_security_group.allow_tls.id]
+    count = length(var.instance_names)
+    ami = var.ami
+    instance_type = var.instance_names[count.index] == "mongodb" ? "t3.medium" : "t2.micro"
+    vpc_security_group_ids = [aws_security_group.roboshop_sg.id]
     tags = {
-      Name = "Master"
-      ENV = "dev"
+      Name = var.instance_names[count.index]
     }
   
 }
 
+resource "aws_route53_record" "r53" {
+  count   = length(var.instance_names)
+  zone_id = var.zone_id
+  name    = "${var.instance_names[count.index]}.${var.domain_name}"
+  type    = "A"
+  ttl     = 1
+  records = [var.instance_names[count.index] == "web" ? aws_instance.roboshop[count.index].public_ip : aws_instance.roboshop[count.index].private_ip]
+  }
 
-
-output "public_ip" {
-
-    value = aws_instance.master.public_ip
-  
-}
-
-output "private_ip" {
-
-    value = aws_instance.master.private_ip
-  
-}
-
-output "tags" {
-
-    value = aws_instance.master.tags
-  
-}
